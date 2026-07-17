@@ -37,18 +37,18 @@ Flutter sign_in_with_apple 插件拿到结果
 
 把 `workers/apple-callback.js` 的内容粘贴进去，保存并部署。
 
-### 1.3 设置环境变量（可选但推荐）
+### 1.3 设置环境变量
 
 在 Worker 详情页进入 **Settings** → **Variables**：
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
 | `APP_SCHEME` | Flutter App 自定义 scheme | `signinwithapple` |
-| `APP_PACKAGE` | Android 应用包名 | `com.example.app` |
+| `APP_PACKAGE` | 默认 Android 应用包名（兜底用） | `com.example.app` |
 
-如果不设置，默认使用 `signinwithapple` 自定义 scheme。
+Worker 优先从 Apple 回调的 `state` 参数里读取包名。如果 `state` 里没有，才会用 `APP_PACKAGE` 兜底。所以 `APP_PACKAGE` 不是必须设置，但建议设置以防万一。
 
-**强烈建议设置 `APP_PACKAGE`**，这样 Worker 会生成 `intent://` 格式的跳转 URL：
+如果设置了包名，Worker 会生成 `intent://` 格式的跳转 URL：
 
 ```text
 intent://callback?code=...#Intent;scheme=signinwithapple;package=com.example.app;end
@@ -131,6 +131,7 @@ flutter pub get
 
 ```dart
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:convert';
 
 Future<void> signInWithApple() async {
   try {
@@ -139,6 +140,11 @@ Future<void> signInWithApple() async {
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
+      // 把包名传给 Worker，Worker 会用它来生成 intent:// 跳转 URL
+      state: jsonEncode({
+        'packageName': 'com.example.app',
+        // 你还可以在这里加 nonce、redirectRoute 等自定义字段
+      }),
       webAuthenticationOptions: WebAuthenticationOptions(
         // Apple Services ID
         clientId: 'com.yourcompany.yourapp.service',
@@ -160,6 +166,8 @@ Future<void> signInWithApple() async {
 ```
 
 `clientId` 是你在 Apple Developer 里创建的 **Services ID**，不是 App ID。
+
+`state` 里传包名后，Worker 会用它生成 `intent://callback?...#Intent;scheme=signinwithapple;package=com.example.app;end`，比普通自定义 scheme 更可靠。
 
 ### 3.3 Android 配置自定义 scheme
 
