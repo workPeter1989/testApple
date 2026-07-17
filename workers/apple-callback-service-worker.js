@@ -104,13 +104,64 @@ async function handleRequest(request) {
         });
       }
 
-      return Response.redirect(redirectUrl, 302);
+      return new Response(
+        buildRedirectHtml(redirectUrl),
+        { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
     } catch (error) {
       return new Response(`Callback error: ${error.message}`, { status: 500 });
     }
   }
 
   return new Response('Method not allowed', { status: 405 });
+}
+
+function buildRedirectHtml(redirectUrl) {
+  const safeUrl = JSON.stringify(redirectUrl);
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正在返回 App...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    p {
+      margin: 0.5rem 0;
+    }
+    a {
+      color: #2563eb;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>正在返回 App...</p>
+    <p>如果没有自动跳转，<a id="link" href="#">请点击这里</a>。</p>
+  </div>
+  <script>
+    (function() {
+      var url = ${safeUrl};
+      document.getElementById('link').href = url;
+      window.location.replace(url);
+    })();
+  </script>
+</body>
+</html>`;
 }
 
 function jsonResponse(data) {

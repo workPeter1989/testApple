@@ -5,14 +5,14 @@
  * 1. 接收 Apple 登录成功后的 POST form data（code、id_token、state、user 等）
  * 2. 从 state 参数中解析 Android 包名（优先）
  * 3. 将参数拼接到 Flutter App 的跳转 URL
- * 4. 302 跳转回 App，让 sign_in_with_apple 插件拿到授权结果
+ * 4. 通过返回 HTML 页面，用 JS location.replace 跳转回 App
  *
  * state 参数支持两种格式：
  * - 纯包名：com.example.app
  * - JSON：{"packageName":"com.example.app","nonce":"xxx"}
  *
  * 调试模式：
- * 在 URL 后加 ?debug=1，Worker 会返回 JSON 而不是 302 跳转，方便排查解析结果。
+ * 在 URL 后加 ?debug=1，Worker 会返回 JSON 而不是跳转页面，方便排查解析结果。
  *
  * 环境变量（在 Cloudflare Worker 设置里配置）：
  * - APP_SCHEME: Flutter App 的自定义 scheme，默认 signinwithapple
@@ -119,8 +119,11 @@ export default {
           });
         }
 
-        // 302 跳转回 Flutter App
-        return Response.redirect(redirectUrl, 302);
+        // 返回 HTML 页面，用 JS 跳转回 App
+        return new Response(
+          buildRedirectHtml(redirectUrl),
+          { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        );
       } catch (error) {
         return new Response(`Callback error: ${error.message}`, { status: 500 });
       }
@@ -135,6 +138,54 @@ function jsonResponse(data) {
     status: 200,
     headers: { 'Content-Type': 'application/json; charset=utf-8' }
   });
+}
+
+function buildRedirectHtml(redirectUrl) {
+  const safeUrl = JSON.stringify(redirectUrl);
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正在返回 App...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    p {
+      margin: 0.5rem 0;
+    }
+    a {
+      color: #2563eb;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>正在返回 App...</p>
+    <p>如果没有自动跳转，<a id="link" href="#">请点击这里</a>。</p>
+  </div>
+  <script>
+    (function() {
+      var url = ${safeUrl};
+      document.getElementById('link').href = url;
+      window.location.replace(url);
+    })();
+  </script>
+</body>
+</html>`;
 }
 
 /**

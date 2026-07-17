@@ -136,7 +136,7 @@
                 </form>
 
                 <div class="notice">
-                    <p>表单提交后，Worker 会返回 JSON 调试信息，里面包含 <code>parsedPackage</code> 和 <code>wouldRedirectTo</code>。如果 <code>parsedPackage</code> 为 <code>null</code>，说明包名没有解析成功。</p>
+                    <p>表单提交后，Worker 会返回一个 HTML 页面并自动通过 JS 跳回 App。如果你想看解析详情，把表单 action 里的 <code>?debug=1</code> 改成普通地址提交，Worker 就会返回 JSON 调试信息。</p>
                 </div>
 
                 <h2 style="margin-top: 2rem;">与 Flutter sign_in_with_apple 配合使用</h2>
