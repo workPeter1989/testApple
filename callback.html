@@ -88,6 +88,27 @@
                     <li><span class="param-key">error</span> — 授权失败时的错误码</li>
                 </ul>
 
+                <h2 style="margin-top: 2rem;">与 Flutter sign_in_with_apple 配合使用</h2>
+                <p>Flutter 的 <code>sign_in_with_apple</code> 插件在不同平台上的行为不同：</p>
+                <ul class="param-list">
+                    <li><span class="param-key">iOS / macOS</span> — 使用原生 Apple Sign In，<strong>不需要</strong>网页回调。</li>
+                    <li><span class="param-key">Android</span> — 使用 Web 授权流程，Apple 会 POST 回调到 <code>redirect_uri</code>，必须借助后端中转回 App。</li>
+                    <li><span class="param-key">Web</span> — 同样使用 Web 授权流程。</li>
+                </ul>
+
+                <div class="notice">
+                    <p>当前这个 GitHub Pages 页面只能作为<strong>调试展示</strong>。真正的 Android 回调请部署 <code>workers/apple-callback.js</code>（Cloudflare Worker 示例），它会接收 Apple POST 并 302 跳转回你的 Flutter App。</p>
+                </div>
+
+                <p><strong>推荐流程：</strong></p>
+                <ol style="color: var(--text-light); margin-left: 1.5rem;">
+                    <li>在 Cloudflare Workers 部署 <code>workers/apple-callback.js</code></li>
+                    <li>绑定自定义域名，例如 <code>https://auth.yourdomain.com/callback</code></li>
+                    <li>Apple Developer 的 redirect_uri 填该 Worker 地址</li>
+                    <li>Flutter 端 <code>webAuthenticationOptions.redirectUri</code> 也填该地址</li>
+                    <li>Android <code>AndroidManifest.xml</code> 配置对应的自定义 scheme 接收回调</li>
+                </ol>
+
                 <p style="margin-top: 1.5rem;">
                     <a href="index.html" class="btn">返回首页</a>
                 </p>

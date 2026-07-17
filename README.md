@@ -31,4 +31,14 @@
 
 `callback.html` 用于展示 Apple Sign In 回调参数。由于 GitHub Pages 是静态托管，无法读取 Apple POST 过来的 form data，因此该页面仅解析 URL 查询参数（适合本地调试或展示）。
 
-生产环境处理 Apple 回调需要后端服务，例如 Cloudflare Workers、Vercel、Netlify Functions 或自建服务器。
+### Flutter sign_in_with_apple 集成
+
+- **iOS / macOS**：使用原生 Apple Sign In，不需要网页回调。
+- **Android / Web**：需要后端中转接收 Apple POST，再跳转回 App。
+
+项目已提供 `workers/apple-callback.js`（Cloudflare Worker 示例），用于：
+1. 接收 Apple POST 的 form data
+2. 将参数拼接到 App 自定义 scheme
+3. 302 跳转回 Flutter App
+
+部署该 Worker 后，将 Apple Developer 里的 redirect_uri 和 Flutter 里的 `webAuthenticationOptions.redirectUri` 都指向 Worker 地址即可。
