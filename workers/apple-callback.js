@@ -11,6 +11,9 @@
  * - 纯包名：com.example.app
  * - JSON：{"packageName":"com.example.app","nonce":"xxx"}
  *
+ * 调试模式：
+ * 在 URL 后加 ?debug=1，Worker 会返回 JSON 而不是 302 跳转，方便排查解析结果。
+ *
  * 环境变量（在 Cloudflare Worker 设置里配置）：
  * - APP_SCHEME: Flutter App 的自定义 scheme，默认 signinwithapple
  * - APP_PACKAGE: 默认 Android 应用包名，当 state 里没有时作为 fallback
@@ -28,6 +31,7 @@ export default {
     const url = new URL(request.url);
     const safeEnv = env || {};
     const appScheme = safeEnv.APP_SCHEME || 'signinwithapple';
+    const isDebug = url.searchParams.get('debug') === '1';
 
     // GET 请求仅用于人工调试，展示当前配置和查询参数
     if (request.method === 'GET') {
@@ -39,13 +43,24 @@ export default {
         queryParams.toString() || 'code=xxx&state=com.example.app'
       );
 
+      if (isDebug) {
+        return jsonResponse({
+          mode: 'debug',
+          appScheme,
+          defaultPackage: safeEnv.APP_PACKAGE || null,
+          parsedPackage: packageFromState || null,
+          queryParams: Object.fromEntries(queryParams.entries()),
+          wouldRedirectTo: redirectExample
+        });
+      }
+
       let paramsText = '';
       if (queryParams.toString()) {
         paramsText = '\nReceived query params:\n';
         for (const [key, value] of queryParams.entries()) {
           paramsText += `  ${key}: ${value}\n`;
         }
-        paramsText += `\nParsed package name: ${packageFromState || '(none)'}\n`;
+        paramsText += `\nParsed package name: ${packageFromState || '(none)'}`;
       }
 
       return new Response(
@@ -66,6 +81,15 @@ export default {
     // 处理 Apple 的 POST 回调
     if (request.method === 'POST') {
       try {
+        const contentType = request.headers.get('Content-Type') || '';
+        if (!contentType.includes('application/x-www-form-urlencoded') && !contentType.includes('multipart/form-data')) {
+          return new Response(
+            `Unsupported Content-Type: ${contentType}. ` +
+            `Apple callbacks use application/x-www-form-urlencoded.`,
+            { status: 400 }
+          );
+        }
+
         const formData = await request.formData();
         const params = new URLSearchParams();
 
@@ -81,8 +105,19 @@ export default {
         // 从 state 参数解析包名，解析失败则使用环境变量兜底
         const packageName = getPackageName(params, safeEnv);
 
-        // 生成跳转回 App 的 URL
         const redirectUrl = buildRedirectUrl(appScheme, packageName, params.toString());
+
+        // debug=1 时返回 JSON，不真正跳转
+        if (isDebug) {
+          return jsonResponse({
+            mode: 'debug',
+            appScheme,
+            defaultPackage: safeEnv.APP_PACKAGE || null,
+            parsedPackage: packageName || null,
+            formParams: Object.fromEntries(params.entries()),
+            wouldRedirectTo: redirectUrl
+          });
+        }
 
         // 302 跳转回 Flutter App
         return Response.redirect(redirectUrl, 302);
@@ -94,6 +129,13 @@ export default {
     return new Response('Method not allowed', { status: 405 });
   }
 };
+
+function jsonResponse(data) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+  });
+}
 
 /**
  * 从 Apple 回调的 state 参数中解析 Android 包名

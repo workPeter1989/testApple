@@ -20,6 +20,7 @@ addEventListener('fetch', event => {
 async function handleRequest(request) {
   const url = new URL(request.url);
   const appScheme = getEnv('APP_SCHEME') || 'signinwithapple';
+  const isDebug = url.searchParams.get('debug') === '1';
 
   // GET 请求仅用于人工调试
   if (request.method === 'GET') {
@@ -30,6 +31,17 @@ async function handleRequest(request) {
       packageFromState || 'com.example.app',
       queryParams.toString() || 'code=xxx&state=com.example.app'
     );
+
+    if (isDebug) {
+      return jsonResponse({
+        mode: 'debug',
+        appScheme,
+        defaultPackage: getEnv('APP_PACKAGE') || null,
+        parsedPackage: packageFromState || null,
+        queryParams: Object.fromEntries(queryParams.entries()),
+        wouldRedirectTo: redirectExample
+      });
+    }
 
     let paramsText = '';
     if (queryParams.toString()) {
@@ -58,6 +70,15 @@ async function handleRequest(request) {
   // 处理 Apple 的 POST 回调
   if (request.method === 'POST') {
     try {
+      const contentType = request.headers.get('Content-Type') || '';
+      if (!contentType.includes('application/x-www-form-urlencoded') && !contentType.includes('multipart/form-data')) {
+        return new Response(
+          `Unsupported Content-Type: ${contentType}. ` +
+          `Apple callbacks use application/x-www-form-urlencoded.`,
+          { status: 400 }
+        );
+      }
+
       const formData = await request.formData();
       const params = new URLSearchParams();
 
@@ -72,6 +93,17 @@ async function handleRequest(request) {
       const packageName = getPackageName(params);
       const redirectUrl = buildRedirectUrl(appScheme, packageName, params.toString());
 
+      if (isDebug) {
+        return jsonResponse({
+          mode: 'debug',
+          appScheme,
+          defaultPackage: getEnv('APP_PACKAGE') || null,
+          parsedPackage: packageName || null,
+          formParams: Object.fromEntries(params.entries()),
+          wouldRedirectTo: redirectUrl
+        });
+      }
+
       return Response.redirect(redirectUrl, 302);
     } catch (error) {
       return new Response(`Callback error: ${error.message}`, { status: 500 });
@@ -81,8 +113,14 @@ async function handleRequest(request) {
   return new Response('Method not allowed', { status: 405 });
 }
 
+function jsonResponse(data) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+  });
+}
+
 function getEnv(key) {
-  // Service Worker 格式下环境变量通过 globalThis 访问
   return globalThis[key] || (typeof env !== 'undefined' ? env[key] : undefined);
 }
 
