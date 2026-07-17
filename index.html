@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的静态网站</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="hero">
+        <div class="container">
+            <h1>欢迎来到我的网站</h1>
+            <p class="subtitle">这是一个托管在 GitHub Pages 上的静态网站</p>
+            <a href="#about" class="btn">了解更多</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="about" class="section">
+            <div class="container">
+                <h2>关于</h2>
+                <p>这个网站使用纯 HTML、CSS 和 JavaScript 构建，并通过 GitHub Actions 自动部署到 GitHub Pages。</p>
+            </div>
+        </section>
+
+        <section id="features" class="section section-alt">
+            <div class="container">
+                <h2>特性</h2>
+                <div class="cards">
+                    <article class="card">
+                        <h3>🚀 快速</h3>
+                        <p>纯静态页面，加载速度快。</p>
+                    </article>
+                    <article class="card">
+                        <h3>🔧 简单</h3>
+                        <p>无需复杂配置，易于维护。</p>
+                    </article>
+                    <article class="card">
+                        <h3>🌐 免费托管</h3>
+                        <p>利用 GitHub Pages 免费发布。</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <span id="year"></span> 我的静态网站. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
