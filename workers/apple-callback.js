@@ -3,11 +3,13 @@
  *
  * 作用：
  * 1. 接收 Apple 登录成功后的 POST form data（code、id_token、state、user 等）
- * 2. 将参数拼接到 Flutter App 的自定义 scheme URL
+ * 2. 将参数拼接到 Flutter App 的跳转 URL
  * 3. 302 跳转回 App，让 sign_in_with_apple 插件拿到授权结果
  *
  * 环境变量（在 Cloudflare Worker 设置里配置）：
  * - APP_SCHEME: Flutter App 的自定义 scheme，默认 signinwithapple
+ * - APP_PACKAGE: Android 应用包名，例如 com.example.app
+ *              如果设置了，会生成 intent:// URL，兼容性更好
  *
  * 部署步骤：
  * 1. 登录 https://dash.cloudflare.com/ 进入 Workers & Pages
@@ -20,13 +22,17 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const appScheme = env.APP_SCHEME || 'signinwithapple';
+    const appPackage = env.APP_PACKAGE || '';
 
     // GET 请求仅用于人工调试，展示当前配置
     if (request.method === 'GET') {
-      const appScheme = env.APP_SCHEME || 'signinwithapple';
+      const redirectExample = buildRedirectUrl(appScheme, appPackage, 'code=xxx&state=yyy');
       return new Response(
         `Apple Sign In callback worker is running.\n` +
-        `App scheme: ${appScheme}://callback\n` +
+        `App scheme: ${appScheme}\n` +
+        `App package: ${appPackage || '(not set)'}\n` +
+        `Redirect example: ${redirectExample}\n\n` +
         `Apple will POST form data here, and this worker will redirect back to the app.`,
         { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
       );
@@ -47,9 +53,8 @@ export default {
           return new Response('Invalid callback: missing code or error', { status: 400 });
         }
 
-        // 自定义 scheme，需与 Flutter AndroidManifest.xml 中的 intent-filter 一致
-        const appScheme = env.APP_SCHEME || 'signinwithapple';
-        const redirectUrl = `${appScheme}://callback?${params.toString()}`;
+        // 生成跳转回 App 的 URL
+        const redirectUrl = buildRedirectUrl(appScheme, appPackage, params.toString());
 
         // 302 跳转回 Flutter App
         return Response.redirect(redirectUrl, 302);
@@ -61,3 +66,19 @@ export default {
     return new Response('Method not allowed', { status: 405 });
   }
 };
+
+/**
+ * 构建跳转回 App 的 URL
+ *
+ * 如果设置了 APP_PACKAGE，使用 Android intent:// 格式：
+ *   intent://callback?code=...#Intent;scheme=signinwithapple;package=com.example.app;end
+ *
+ * 否则使用普通自定义 scheme：
+ *   signinwithapple://callback?code=...
+ */
+function buildRedirectUrl(scheme, packageName, queryString) {
+  if (packageName) {
+    return `intent://callback?${queryString}#Intent;scheme=${scheme};package=${packageName};end`;
+  }
+  return `${scheme}://callback?${queryString}`;
+}

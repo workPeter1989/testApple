@@ -37,15 +37,24 @@ Flutter sign_in_with_apple 插件拿到结果
 
 把 `workers/apple-callback.js` 的内容粘贴进去，保存并部署。
 
-### 1.3 设置环境变量（可选）
+### 1.3 设置环境变量（可选但推荐）
 
 在 Worker 详情页进入 **Settings** → **Variables**：
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
 | `APP_SCHEME` | Flutter App 自定义 scheme | `signinwithapple` |
+| `APP_PACKAGE` | Android 应用包名 | `com.example.app` |
 
-如果不设置，默认使用 `signinwithapple`。
+如果不设置，默认使用 `signinwithapple` 自定义 scheme。
+
+**强烈建议设置 `APP_PACKAGE`**，这样 Worker 会生成 `intent://` 格式的跳转 URL：
+
+```text
+intent://callback?code=...#Intent;scheme=signinwithapple;package=com.example.app;end
+```
+
+intent 方式比普通自定义 scheme 更可靠，因为它明确指定了要打开哪个 App，能避免 scheme 冲突或被其他应用拦截。
 
 ### 1.4 绑定域名（推荐）
 
@@ -61,11 +70,13 @@ Worker 默认有一个 `xxx.workers.dev` 地址，可以直接用，也可以绑
 https://apple.yourdomain.com/callback
 ```
 
-用浏览器访问这个地址，如果看到：
+用浏览器访问这个地址，如果看到类似：
 
 ```text
 Apple Sign In callback worker is running.
-App scheme: signinwithapple://callback
+App scheme: signinwithapple
+App package: com.example.app
+Redirect example: intent://callback?code=xxx&state=yyy#Intent;scheme=signinwithapple;package=com.example.app;end
 ```
 
 说明 Worker 部署成功。
