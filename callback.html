@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple ID 登录回调</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .callback-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            overflow-x: auto;
+        }
+        .callback-box pre {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+        .param-list {
+            list-style: none;
+            padding: 0;
+        }
+        .param-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .param-list li:last-child {
+            border-bottom: none;
+        }
+        .param-key {
+            font-weight: 600;
+            color: #111827;
+        }
+        .param-value {
+            color: #2563eb;
+            word-break: break-all;
+        }
+        .notice {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .notice p {
+            margin: 0;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <header class="hero" style="min-height: 30vh;">
+        <div class="container">
+            <h1>Apple ID 登录回调</h1>
+            <p class="subtitle">处理 Apple Sign In 返回的授权信息</p>
+        </div>
+    </header>
+
+    <main>
+        <section class="section">
+            <div class="container">
+                <div class="notice">
+                    <p><strong>注意：</strong>GitHub Pages 是静态托管服务，无法直接读取 Apple POST 过来的 form data。生产环境请配合后端服务（如 Cloudflare Workers、Vercel、Netlify Functions 或自己的服务器）处理回调。</p>
+                </div>
+
+                <h2>回调参数</h2>
+                <p>以下是从 URL 查询参数中解析出的内容（通常用于本地测试或调试）：</p>
+
+                <div id="params" class="callback-box">
+                    <p>暂无回调参数。</p>
+                </div>
+
+                <h2 style="margin-top: 2rem;">完整 URL</h2>
+                <div class="callback-box">
+                    <pre id="full-url"></pre>
+                </div>
+
+                <h2 style="margin-top: 2rem;">Apple 回调说明</h2>
+                <p>Apple 登录成功后会 POST 以下字段到 redirect_uri：</p>
+                <ul class="param-list">
+                    <li><span class="param-key">code</span> — 用于换取 access_token 和 refresh_token</li>
+                    <li><span class="param-key">id_token</span> — JWT 格式的用户身份令牌</li>
+                    <li><span class="param-key">state</span> — 你发起授权时传入的状态值</li>
+                    <li><span class="param-key">user</span> — 首次授权时返回的用户信息（JSON 字符串）</li>
+                    <li><span class="param-key">error</span> — 授权失败时的错误码</li>
+                </ul>
+
+                <p style="margin-top: 1.5rem;">
+                    <a href="index.html" class="btn">返回首页</a>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <span id="year"></span> 我的静态网站. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const paramsContainer = document.getElementById('params');
+            const fullUrl = document.getElementById('full-url');
+            const url = new URL(window.location.href);
+            const searchParams = url.searchParams;
+
+            fullUrl.textContent = window.location.href;
+
+            if (searchParams.toString()) {
+                const list = document.createElement('ul');
+                list.className = 'param-list';
+                for (const [key, value] of searchParams.entries()) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="param-key">${escapeHtml(key)}</span>: <span class="param-value">${escapeHtml(value)}</span>`;
+                    list.appendChild(li);
+                }
+                paramsContainer.innerHTML = '';
+                paramsContainer.appendChild(list);
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
