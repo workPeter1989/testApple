@@ -145,19 +145,23 @@ function buildRedirectHtml(redirectUrl) {
     a {
       color: #2563eb;
       word-break: break-all;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <p>正在返回 App...</p>
-    <p>如果没有自动跳转，<a id="link" href="#">请点击这里</a>。</p>
+    <p>如果没有自动跳转，<a id="link" href=${safeUrl}>请点击这里</a>。</p>
   </div>
   <script>
     (function() {
-      var url = ${safeUrl};
-      document.getElementById('link').href = url;
-      window.location.replace(url);
+      var link = document.getElementById('link');
+      if (link.click) {
+        link.click();
+      } else {
+        window.location.replace(link.href);
+      }
     })();
   </script>
 </body>
