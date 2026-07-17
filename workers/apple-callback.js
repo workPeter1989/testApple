@@ -5,14 +5,11 @@
  * 1. 接收 Apple 登录成功后的 POST form data（code、id_token、state、user 等）
  * 2. 从 state 参数中解析 Android 包名（优先）
  * 3. 将参数拼接到 Flutter App 的跳转 URL
- * 4. 通过返回 HTML 页面，用 JS location.replace 跳转回 App
+ * 4. 通过返回 HTML 页面，用 <a> 标签自动点击跳转回 App
  *
  * state 参数支持两种格式：
  * - 纯包名：com.example.app
  * - JSON：{"packageName":"com.example.app","nonce":"xxx"}
- *
- * 调试模式：
- * 在 URL 后加 ?debug=1，Worker 会返回 JSON 而不是跳转页面，方便排查解析结果。
  *
  * 环境变量（在 Cloudflare Worker 设置里配置）：
  * - APP_SCHEME: Flutter App 的自定义 scheme，默认 signinwithapple
@@ -31,7 +28,6 @@ export default {
     const url = new URL(request.url);
     const safeEnv = env || {};
     const appScheme = safeEnv.APP_SCHEME || 'signinwithapple';
-    const isDebug = url.searchParams.get('debug') === '1';
 
     // GET 请求仅用于人工调试，展示当前配置和查询参数
     if (request.method === 'GET') {
@@ -42,17 +38,6 @@ export default {
         packageFromState || 'com.example.app',
         queryParams.toString() || 'code=xxx&state=com.example.app'
       );
-
-      if (isDebug) {
-        return jsonResponse({
-          mode: 'debug',
-          appScheme,
-          defaultPackage: safeEnv.APP_PACKAGE || null,
-          parsedPackage: packageFromState || null,
-          queryParams: Object.fromEntries(queryParams.entries()),
-          wouldRedirectTo: redirectExample
-        });
-      }
 
       let paramsText = '';
       if (queryParams.toString()) {
@@ -105,21 +90,10 @@ export default {
         // 从 state 参数解析包名，解析失败则使用环境变量兜底
         const packageName = getPackageName(params, safeEnv);
 
+        // 生成跳转回 App 的 URL
         const redirectUrl = buildRedirectUrl(appScheme, packageName, params.toString());
 
-        // debug=1 时返回 JSON，不真正跳转
-        if (isDebug) {
-          return jsonResponse({
-            mode: 'debug',
-            appScheme,
-            defaultPackage: safeEnv.APP_PACKAGE || null,
-            parsedPackage: packageName || null,
-            formParams: Object.fromEntries(params.entries()),
-            wouldRedirectTo: redirectUrl
-          });
-        }
-
-        // 返回 HTML 页面，用 JS 跳转回 App
+        // 返回 HTML 页面，用 <a> 标签自动点击跳转回 App
         return new Response(
           buildRedirectHtml(redirectUrl),
           { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -132,13 +106,6 @@ export default {
     return new Response('Method not allowed', { status: 405 });
   }
 };
-
-function jsonResponse(data) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' }
-  });
-}
 
 function buildRedirectHtml(redirectUrl) {
   const safeUrl = JSON.stringify(redirectUrl);

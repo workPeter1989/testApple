@@ -20,7 +20,6 @@ addEventListener('fetch', event => {
 async function handleRequest(request) {
   const url = new URL(request.url);
   const appScheme = getEnv('APP_SCHEME') || 'signinwithapple';
-  const isDebug = url.searchParams.get('debug') === '1';
 
   // GET 请求仅用于人工调试
   if (request.method === 'GET') {
@@ -32,24 +31,13 @@ async function handleRequest(request) {
       queryParams.toString() || 'code=xxx&state=com.example.app'
     );
 
-    if (isDebug) {
-      return jsonResponse({
-        mode: 'debug',
-        appScheme,
-        defaultPackage: getEnv('APP_PACKAGE') || null,
-        parsedPackage: packageFromState || null,
-        queryParams: Object.fromEntries(queryParams.entries()),
-        wouldRedirectTo: redirectExample
-      });
-    }
-
     let paramsText = '';
     if (queryParams.toString()) {
       paramsText = '\nReceived query params:\n';
       for (const [key, value] of queryParams.entries()) {
         paramsText += `  ${key}: ${value}\n`;
       }
-      paramsText += `\nParsed package name: ${packageFromState || '(none)'}\n`;
+      paramsText += `\nParsed package name: ${packageFromState || '(none)'}`;
     }
 
     return new Response(
@@ -92,17 +80,6 @@ async function handleRequest(request) {
 
       const packageName = getPackageName(params);
       const redirectUrl = buildRedirectUrl(appScheme, packageName, params.toString());
-
-      if (isDebug) {
-        return jsonResponse({
-          mode: 'debug',
-          appScheme,
-          defaultPackage: getEnv('APP_PACKAGE') || null,
-          parsedPackage: packageName || null,
-          formParams: Object.fromEntries(params.entries()),
-          wouldRedirectTo: redirectUrl
-        });
-      }
 
       return new Response(
         buildRedirectHtml(redirectUrl),
@@ -166,13 +143,6 @@ function buildRedirectHtml(redirectUrl) {
   </script>
 </body>
 </html>`;
-}
-
-function jsonResponse(data) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' }
-  });
 }
 
 function getEnv(key) {
