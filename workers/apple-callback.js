@@ -28,9 +28,25 @@ export default {
     const url = new URL(request.url);
     const appScheme = env.APP_SCHEME || 'signinwithapple';
 
-    // GET 请求仅用于人工调试，展示当前配置
+    // GET 请求仅用于人工调试，展示当前配置和查询参数
     if (request.method === 'GET') {
-      const redirectExample = buildRedirectUrl(appScheme, 'com.example.app', 'code=xxx&state=com.example.app');
+      const queryParams = url.searchParams;
+      const packageFromState = getPackageName(queryParams, env);
+      const redirectExample = buildRedirectUrl(
+        appScheme,
+        packageFromState || 'com.example.app',
+        queryParams.toString() || 'code=xxx&state=com.example.app'
+      );
+
+      let paramsText = '';
+      if (queryParams.toString()) {
+        paramsText = '\nReceived query params:\n';
+        for (const [key, value] of queryParams.entries()) {
+          paramsText += `  ${key}: ${value}\n`;
+        }
+        paramsText += `\nParsed package name: ${packageFromState || '(none)'}\n`;
+      }
+
       return new Response(
         `Apple Sign In callback worker is running.\n` +
         `App scheme: ${appScheme}\n` +
@@ -38,8 +54,9 @@ export default {
         `This worker reads the package name from the 'state' parameter.\n` +
         `Supported state formats:\n` +
         `  - com.example.app\n` +
-        `  - {"packageName":"com.example.app","nonce":"xxx"}\n\n` +
-        `Redirect example: ${redirectExample}\n\n` +
+        `  - {"packageName":"com.example.app","nonce":"xxx"}\n` +
+        paramsText +
+        `\nWould redirect to: ${redirectExample}\n\n` +
         `Apple will POST form data here, and this worker will redirect back to the app.`,
         { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
       );
