@@ -37,6 +37,12 @@ Flutter sign_in_with_apple 插件拿到结果
 
 把 `workers/apple-callback.js` 的内容粘贴进去，保存并部署。
 
+如果粘贴后访问报 500，说明当前 Worker 可能是 **Service Worker 格式**，请改用 `workers/apple-callback-service-worker.js`。
+
+判断方法：
+- 代码编辑框顶部显示 "ES Module" 或代码模板是 `export default` → 用 `apple-callback.js`
+- 代码编辑框顶部显示 "Service Worker" 或代码模板是 `addEventListener('fetch', ...)` → 用 `apple-callback-service-worker.js`
+
 ### 1.3 设置环境变量
 
 在 Worker 详情页进入 **Settings** → **Variables**：

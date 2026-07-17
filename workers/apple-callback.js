@@ -26,12 +26,13 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const appScheme = env.APP_SCHEME || 'signinwithapple';
+    const safeEnv = env || {};
+    const appScheme = safeEnv.APP_SCHEME || 'signinwithapple';
 
     // GET 请求仅用于人工调试，展示当前配置和查询参数
     if (request.method === 'GET') {
       const queryParams = url.searchParams;
-      const packageFromState = getPackageName(queryParams, env);
+      const packageFromState = getPackageName(queryParams, safeEnv);
       const redirectExample = buildRedirectUrl(
         appScheme,
         packageFromState || 'com.example.app',
@@ -50,7 +51,7 @@ export default {
       return new Response(
         `Apple Sign In callback worker is running.\n` +
         `App scheme: ${appScheme}\n` +
-        `Default package: ${env.APP_PACKAGE || '(not set)'}\n\n` +
+        `Default package: ${safeEnv.APP_PACKAGE || '(not set)'}\n\n` +
         `This worker reads the package name from the 'state' parameter.\n` +
         `Supported state formats:\n` +
         `  - com.example.app\n` +
@@ -78,7 +79,7 @@ export default {
         }
 
         // 从 state 参数解析包名，解析失败则使用环境变量兜底
-        const packageName = getPackageName(params, env);
+        const packageName = getPackageName(params, safeEnv);
 
         // 生成跳转回 App 的 URL
         const redirectUrl = buildRedirectUrl(appScheme, packageName, params.toString());
@@ -116,7 +117,8 @@ function getPackageName(params, env) {
   }
 
   // 兜底：使用环境变量配置的默认包名
-  return env.APP_PACKAGE || '';
+  const safeEnv = env || {};
+  return safeEnv.APP_PACKAGE || '';
 }
 
 /**
